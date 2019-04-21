@@ -1,15 +1,10 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-package compilador;
+package br.com.joaoregis.compiler;
 
 /**
  *
  * @author jooh_
  */
-public class Berco {
+public class Compiler {
     private char token;
     private int pos_token;
     private char program[];
@@ -24,7 +19,7 @@ public class Berco {
         return this.codeObjeto;
     }
     
-    public Berco(String program) {
+    public Compiler(String program) {
         this.program = program.toCharArray();
         this.pos_token = -1;
         this.codeObjeto = "";
