@@ -29,7 +29,21 @@ public class Compiler {
     }
 
     public void nextChar() {
-        pos_token++;
+        
+        this.pos_token++;
+
+        while (
+            (pos_token < program.length) &&
+            (program[this.pos_token] == ' ' 
+            || program[this.pos_token] == '\r' 
+            || program[this.pos_token] == '\t' 
+            || program[this.pos_token] == '\n')
+        ) {
+
+            this.pos_token++;
+
+        }
+
         if (pos_token < program.length) {
             token = program[pos_token];
 
@@ -165,7 +179,6 @@ public class Compiler {
         char name;
         name = getName();
         match('=');
-        //expression();
         boolExpression();
         emit("MOV [" + name + "], AX");
     }
@@ -176,6 +189,11 @@ public class Compiler {
                 case 'i':
                     doIf();
                     break;
+                    
+                case 'w':
+                    doWhile();
+                    break;
+                    
                 default:
                     assignment();
                     break;
@@ -183,15 +201,9 @@ public class Compiler {
         }
     }
 
-    void other() {
-        emit("#" + getName());
-    }
-
-    void condition() {
-        emit("# condition");
-    }
-
     void program() {
+        match('p');
+        emit("PROGRAM");
         block();
         if (token != 'e') {
             error += "END esperado";
@@ -206,12 +218,27 @@ public class Compiler {
     void postLabel(int lbl) {
         emit("L" + lbl + ":");
     }
+    
+    void doWhile() {
+        
+        int l1, l2;
+        match('w');
+        l1 = newLabel();
+        l2 = newLabel();
+        postLabel(l1);
+        boolExpression();
+        emit("JZ L" + l2);
+        block();
+        match('e');
+        emit("JMP L" + l1);
+        postLabel(l2);
+        
+    }
 
     void doIf() {
         int l1, l2;
         match('i'); // IF
         l1 = newLabel();
-        //condition();
         boolExpression();
         l2 = l1;
         emit("JZ L" + l1);
@@ -325,6 +352,14 @@ public class Compiler {
                     equals();
                     break;
 
+                case '<':
+                    minor();
+                    break;
+
+                case '>':
+                    higher();
+                    break;
+
                 default:
                     break;
             }
@@ -345,6 +380,39 @@ public class Compiler {
         emit("POP BX");
         emit("CMP BX, AX");
         emit("JE L" + l1);
+        emit("MOV AX, 0");
+        emit("JMP L" + l2);
+        postLabel(l1);
+        emit("MOV AX, -1");
+        postLabel(l2);
+    }
+
+    void minor() {
+        int l1, l2;
+
+        match('=');
+        l1 = newLabel();
+        l2 = newLabel();
+        expression();
+        emit("POP BX");
+        emit("CMP BX, AX");
+        emit("JL L" + l1);
+        emit("MOV AX, 0");
+        emit("JMP L" + l2);
+        postLabel(l1);
+        emit("MOV AX, -1");
+        postLabel(l2);
+    }
+    
+    void higher() {
+        int l1, l2;
+        match('=');
+        l1 = newLabel();
+        l2 = newLabel();
+        expression();
+        emit("POP BX");
+        emit("CMP BX, AX");
+        emit("JG L" + l1);
         emit("MOV AX, 0");
         emit("JMP L" + l2);
         postLabel(l1);
