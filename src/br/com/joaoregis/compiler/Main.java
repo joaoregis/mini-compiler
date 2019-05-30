@@ -13,15 +13,18 @@ public class Main {
      */
     public static void main(String[] args) {
         
-        String program;
-        try (Scanner input = new Scanner(System.in)) {
-            program = input.nextLine();
-        }
-        Compiler b = new Compiler(program);
-        b.init();
-        
-        System.out.println(b.getError());
-        System.out.println(b.getCodeObjeto());
+        Scanner input = new Scanner(System.in);
+
+        String programaFonte = input.nextLine();
+
+        input.close();
+
+        Compiler compBerco = new Compiler(programaFonte);
+
+        compBerco.init();
+        compBerco.program(); 
+
+        System.out.println(compBerco.getCodeObjeto());
     }
     
 }

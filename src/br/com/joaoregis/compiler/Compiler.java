@@ -1,172 +1,144 @@
 package br.com.joaoregis.compiler;
 
-/**
- *
- * @author jooh_
- */
 public class Compiler {
+
     private char token;
     private int pos_token;
     private char program[];
     private String error;
     private String codeObjeto;
     private int labelCount;
-    
+
     public String getError() {
-        return this.error;
+        return error;
     }
-    
+
+    public void setProgram(char[] program) {
+        this.program = program;
+    }
+
     public String getCodeObjeto() {
-        return this.codeObjeto;
+        return codeObjeto;
     }
-    
-    public Compiler(String program) {
-        this.program = program.toCharArray();
-        this.pos_token = -1;
+
+    public Compiler(String pProgram) {
+        program = pProgram.toCharArray();
+        pos_token = -1;
         this.codeObjeto = "";
-        this.error = "";
         this.labelCount = 0;
     }
-    
-    private void nextChar() {
-        this.pos_token++;
-        
-        while (
-            program[this.pos_token] == ' ' 
-            || program[this.pos_token] == '\r' 
-            || program[this.pos_token] == '\t' ) {
 
-            this.pos_token++;
+    public void nextChar() {
+        pos_token++;
+        if (pos_token < program.length) {
+            token = program[pos_token];
 
-            if (this.pos_token >= program.length)
-                break;
-
-        }
-        
-        if (this.pos_token < program.length) {
-            token = program[this.pos_token];
         }
     }
-    
+
     public void init() {
         nextChar();
-        program();
     }
 
-    private void match(char c) {
+    public void match(char c) {
         if (token != c) {
-            error += "[ERROR] " + c + " was expected\n";
+            error += c + " esperado";
         }
-        
         nextChar();
     }
-    
-    private char getName() {
+
+    public char getName() {
         char name;
         if (!Character.isLetter(token)) {
-            error += "[ERROR] Name was expected\n";
+            error += "Name esperado";
         }
-        
+
         name = Character.toUpperCase(token);
         nextChar();
-        
         return name;
     }
-    
-    private char getNum() {
+
+    public char getNum() {
         char num;
         if (!Character.isDigit(token)) {
-            error += "[ERROR] Num was expected\n";
+            error += "Integer esperado";
         }
-        
         num = token;
         nextChar();
-        
         return num;
     }
-    
-    private void emit(String pcode) {
-        codeObjeto += pcode + "\n";
+
+    public void emit(String pCode) {
+        codeObjeto += pCode + "\n";
     }
-    
-    private void expression() {
+
+    public void expression() {
         term();
-        while(isAddOp(token)) {
+        while (isAddOp(token)) {
             emit("PUSH AX");
-            switch(token) {
-                case '+': {
+            switch (token) {
+                case '+':
                     add();
                     break;
-                }
-                case '-': {
+                case '-':
                     subtract();
                     break;
-                }
-                default: {
-                    error += "[ERROR] AddOp was expected\n";
+                default:
+                    error += "AddOp esperado";
                     break;
-                }
             }
         }
-        
+
         if (token != 'e') {
-            error += "[ERROR] End was expected\n";
+            error += "End esperado";
         }
     }
-    
-    private boolean isAddOp(char c) {
-        String op = "+-";
+
+    public boolean isAddOp(char c) {
         return (c == '+' || c == '-');
     }
-    
-    private void add() {
+
+    public void add() {
         match('+');
         term();
         emit("POP BX");
-        emit("ADD AX, BX");
+        emit("ADD AX,BX");
     }
-   
-    private void subtract() {
+
+    public void subtract() {
         match('-');
         term();
         emit("POP BX");
-        emit("SUB AX, BX");
+        emit("SUB AX,BX");
         emit("NEG AX");
     }
-    
-    private boolean isMulOp(char c) {
-        return (c == '*' || c == '/');
-    }
-    
-    private void term() {
+
+    public void term() {
         factor();
-        while(isMulOp(token)) {
+        while (token == '*' || token == '/') {
             emit("PUSH AX");
-            switch(token) {
-                case '*': {
+            switch (token) {
+                case '*':
                     multiply();
                     break;
-                }
-                case '/': {
+                case '/':
                     divide();
                     break;
-                }
-                default: {
-                    error += "[ERROR] MulOp was expected\n";
+                default:
+                    error += "MulOp esperado";
                     break;
-                }
             }
         }
     }
-    
-    private void multiply() {
+
+    public void multiply() {
         match('*');
         factor();
         emit("POP BX");
         emit("IMUL BX");
     }
-    
-    private void divide() {
+
+    public void divide() {
         match('/');
         factor();
         emit("POP BX");
@@ -174,66 +146,76 @@ public class Compiler {
         emit("CWD");
         emit("IDIV BX");
     }
-    
-    private void factor() {
-        emit("MOV AX, " + getNum());
+
+    public void factor() {
+        if (token == '(') {
+            match('(');
+            //expression();
+            boolExpression();
+            match(')');
+        } else if (Character.isLetter(token)) {
+            emit("MOV AX, [" + getName() + "]");
+        } else {
+            emit("MOV AX, " + getNum());
+        }
+
     }
-            
-    private void assignment() {
+
+    public void assignment() {
         char name;
         name = getName();
         match('=');
-        expression();
+        //expression();
+        boolExpression();
         emit("MOV [" + name + "], AX");
     }
-    
-    private void program() {
-        block();
-        if (token != 'e')
-            error += "[ERROR] End was expected\n";
-        
-        emit("END");
-    }
-    
-    private void block() {
-        while(token != 'e' && token != 'l') {
-            switch(token) {
+
+    void block() {
+        while (token != 'e' && token != 'l') {
+            switch (token) {
                 case 'i':
                     doIf();
                     break;
-                    
                 default:
-                    other();
+                    assignment();
                     break;
             }
         }
     }
-    
-    private void other() {
-        emit("# " + getName());
+
+    void other() {
+        emit("#" + getName());
     }
-    
-    private void condition() {
+
+    void condition() {
         emit("# condition");
     }
-    
-    private int newLabel() {
+
+    void program() {
+        block();
+        if (token != 'e') {
+            error += "END esperado";
+        }
+        emit("END");
+    }
+
+    int newLabel() {
         return labelCount++;
     }
-    
-    private void postLabel(int lbl) {
+
+    void postLabel(int lbl) {
         emit("L" + lbl + ":");
     }
-    
-    private void doIf() {
+
+    void doIf() {
         int l1, l2;
-        match('i');
-        condition();
+        match('i'); // IF
         l1 = newLabel();
+        //condition();
+        boolExpression();
         l2 = l1;
         emit("JZ L" + l1);
         block();
-        
         if (token == 'l') {
             match('l');
             l2 = newLabel();
@@ -241,9 +223,133 @@ public class Compiler {
             postLabel(l1);
             block();
         }
-
-        match('e');
+        match('e'); // ENDIF
         postLabel(l2);
     }
-    
+
+    boolean isBoolean(char c) {
+        return (c == 'T' || c == 'F');
+    }
+
+    boolean getBoolean() {
+        boolean b;
+
+        if (!isBoolean(token)) {
+            error = "Boolean esperado";
+        }
+
+        b = (token == 'T');
+        nextChar();
+        return b;
+    }
+
+    void boolOr() {
+        match('|');
+        boolTerm();
+        emit("POP BX");
+        emit("OR AX, BX");
+    }
+
+    void boolXor() {
+        match('~');
+        boolTerm();
+        emit("POP BX");
+        emit("XOR AX, BX");
+    }
+
+    void boolExpression() {
+        boolTerm();
+
+        while (isOrOp(token)) {
+            emit("PUSH AX");
+            switch (token) {
+                case '|':
+                    boolOr();
+                    break;
+
+                case '~':
+                    boolXor();
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    }
+
+    boolean isOrOp(char c) {
+        return (c == '|' || c == '~');
+    }
+
+    void boolTerm() {
+        notFactor();
+
+        while (token == '&') {
+            emit("PUSH AX");
+            match('&');
+            notFactor();
+            emit("POP BX");
+            emit("AND AX, BX");
+        }
+    }
+
+    void notFactor() {
+        if (token == '!') {
+            match('!');
+            boolFactor();
+            emit("NOT BX");
+        } else {
+            boolFactor();
+        }
+    }
+
+    void boolFactor() {
+        if (isBoolean(token)) {
+            if (getBoolean()) {
+                emit("MOV AX, -1");
+            } else {
+                emit("MOV AX, 0");
+            }
+        } else {
+            relaction();
+        }
+    }
+
+    void relaction() {
+        expression();
+        if (isRelOp(token)) {
+            emit("PUSH AX");
+
+            switch (token) {
+                case '=':
+                    equals();
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    }
+
+    boolean isRelOp(char c) {
+        return (c == '=' || c == '#' || c == '<' || c == '>');
+    }
+
+    void equals() {
+        int l1, l2;
+
+        match('=');
+        l1 = newLabel();
+        l2 = newLabel();
+        expression();
+        emit("POP BX");
+        emit("CMP BX, AX");
+        emit("JE L" + l1);
+        emit("MOV AX, 0");
+        emit("JMP L" + l2);
+        postLabel(l1);
+        emit("MOV AX, -1");
+        postLabel(l2);
+    }
+
 }
