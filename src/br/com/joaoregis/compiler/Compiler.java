@@ -202,8 +202,6 @@ public class Compiler {
     }
 
     void program() {
-        match('p');
-        emit("PROGRAM");
         block();
         if (token != 'e') {
             error += "END esperado";
